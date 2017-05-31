@@ -1,7 +1,5 @@
-package com.astraia.vmware
+package com.lqbweb.vmware
 
-import com.adarshr.args.ArgsEngine
-import com.astraia.vmware.InstanceTools.VmxFileNotFound
 import groovy.util.slurpersupport.GPathResult
 import groovy.util.slurpersupport.NodeChild
 import groovy.xml.XmlUtil

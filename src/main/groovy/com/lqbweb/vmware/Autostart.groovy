@@ -1,4 +1,4 @@
-package com.astraia.vmware
+package com.lqbweb.vmware
 
 import groovy.util.slurpersupport.GPathResult
 import groovy.xml.XmlUtil
