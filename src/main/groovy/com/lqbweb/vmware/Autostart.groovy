@@ -14,11 +14,27 @@ class Autostart {
     }
 
     public boolean isMoidIn(int moid) {
+        if(!isAutostartNodeThere())
+            return false;
+
         def res = xml.AutoStartOrder.e.findAll {
             it.key.moid == "${moid}"
         }
         return res.size()>0;
     }
+
+
+
+    public void removeInstance(int moid) {
+        def res = xml.AutoStartOrder.e.findAll {
+            it.key.moid == "${moid}"
+        }
+        res.replaceNode {}
+
+        int length = Integer.parseInt(xml.AutoStartOrder._length.text());
+        xml.AutoStartOrder._length.replaceBody length - 1;
+    }
+
 
     private boolean isAutostartNodeThere() {
         return xml.AutoStartOrder.size() > 0;

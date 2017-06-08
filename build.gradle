@@ -2,7 +2,7 @@ apply plugin: 'groovy'
 apply plugin: 'java'
 
 group = "lqbweb"
-version = "1.0.0"
+version = "1.0.10"
 
 repositories {
     mavenCentral()

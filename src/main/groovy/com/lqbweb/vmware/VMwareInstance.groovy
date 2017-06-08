@@ -21,9 +21,9 @@ class VMwareInstance {
     private int vmlistIndex=-1;
 
 
-    public VMwareInstance(File instanceFile) {
-        this.instanceFile = instanceFile
-        this.vmxFile = InstanceTools.getVmxFile(this.instanceFile);
+    public VMwareInstance(File vmxFile) {
+        this.instanceFile = vmxFile.getParentFile();
+        this.vmxFile = vmxFile;
     }
 
     boolean exists() {
@@ -84,10 +84,6 @@ class VMwareInstance {
 
     public int hashCode() {
         return objId.hashCode() + this.vmxFile.hashCode();
-    }
-
-    public static VMwareInstance fromVmxFile(File vmxFile) {
-        return new VMwareInstance(vmxFile.getParentFile());
     }
 
     public static String convertObjId(int id) {

@@ -23,16 +23,14 @@ class GlobalInventory implements Inventory{
         inventoryParsed = new XmlSlurper().parse(Globals.inventoryXmlFile)
         inventoryParsed.ConfigEntry.each { entry ->
             File vmxFile=new File(entry.vmxCfgPath.text());
-            if(vmxFile.isFile()) {
-                VMwareInstance newInstance = VMwareInstance.fromVmxFile(vmxFile);
-                int objId = Integer.parseInt((String)entry.objID);
-                if(validateObjId(objId)) {
-                    newInstance.setObjId(objId);
-                } else {
-                    throw new IllegalStateException("duplicate ID!");
-                }
-                globalInstances.add(newInstance);
+            VMwareInstance newInstance = new VMwareInstance(vmxFile);
+            int objId = Integer.parseInt((String)entry.objID);
+            if(validateObjId(objId)) {
+                newInstance.setObjId(objId);
+            } else {
+                throw new IllegalStateException("duplicate ID!");
             }
+            globalInstances.add(newInstance);
         }
         logger.debug("global inventory initialized with ${globalInstances.size()} instances")
     }
@@ -85,7 +83,7 @@ class GlobalInventory implements Inventory{
     public VMwareInstance findInstance(File vmxFile) {
         Path vmxFilePath = vmxFile.toPath();
         return this.globalInstances.find { VMwareInstance instance ->
-            return Files.isSameFile(instance.getVmxFile().toPath(), vmxFilePath);
+            return instance.getVmxFile().toPath().equals(vmxFilePath);
         };
     }
 

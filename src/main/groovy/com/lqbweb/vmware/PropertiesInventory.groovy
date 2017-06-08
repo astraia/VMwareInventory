@@ -29,7 +29,7 @@ class PropertiesInventory implements Inventory{
     public Integer findMachineIndex(File vmxFile) {
         Path path = vmxFile.toPath();
         Map.Entry<Integer, VMwareInstance> res = idxInstancesMap.find { Integer i, VMwareInstance inst ->
-            return Files.isSameFile(inst.getVmxFile().toPath(), path)
+            return inst.getVmxFile().toPath().equals(path);
         };
         if(res==null)
             return -1
@@ -49,18 +49,22 @@ class PropertiesInventory implements Inventory{
     }
 
     private void writeVmlist(StringBuilder builder) {
+        int counter=1;
         vmListInstancesMap.forEach({ Integer vmlistKey, VMwareInstance m ->
             m.getVmlistMap().forEach({ String key, String value ->
-                builder << "vmlist${vmlistKey}.${key} = ${value}${nl}"
+                builder << "vmlist${counter}.${key} = ${value}${nl}"
             })
+            counter++;
         })
     }
 
     private void writeIndexes(StringBuilder builder) {
+        int counter=0;
         idxInstancesMap.forEach({ Integer idxKey, VMwareInstance m ->
             m.getIndexMap().forEach({ String key, String value ->
-                builder << "index${idxKey}.${key} = ${value}${nl}"
+                builder << "index${counter}.${key} = ${value}${nl}"
             })
+            counter++;
         })
         builder << "index.count = \"${idxInstancesMap.size()}\"${nl}"
     }
@@ -88,54 +92,73 @@ class PropertiesInventory implements Inventory{
         props.loadProperties(Globals.inventoryPropsFile);
 
         //instantiate the VMwareInstances and fill up internal maps
+        instantiateMachines(props)
+
+        //fill up the properties for each VMwareinstance
+        fillProperties(props)
+
+        logger.trace("properties inventory initialized! ${vmListInstancesMap.size()} instances");
+        logger.debug(vmListInstancesMap.toMapString());
+    }
+
+    private fillProperties(VMLSProperties props) {
+        props.forEach({ String k, String v ->
+            def dotIndex = k.indexOf(".");
+            def indexPart = k.substring(0, dotIndex);
+            def rest = k.substring(dotIndex + 1);
+            def valueParsed = parseValue(v);
+
+            if(!valueParsed.isEmpty()) {
+                String res = indexPart.replaceAll('\\D*', "")
+                if (!res.isEmpty()) {
+                    int index = Integer.parseInt(res);
+
+                    if (indexPart.startsWith("index")) {
+                        VMwareInstance inst = idxInstancesMap.get(index);
+                        if (inst == null)
+                            throw new IllegalStateException("VMwareInstance not found. It should not happen")
+                        inst.putIndexProperty(rest, v);
+                    } else if (indexPart.startsWith("vmlist")) {
+                        VMwareInstance inst = vmListInstancesMap.get(index);
+                        if (inst == null)
+                            throw new NullPointerException("could not find VMware instance for index ${index} value ${v}");
+                        inst.putVmlistProperty(rest, v);
+                    }
+                }
+            }
+        })
+    }
+
+    private String parseValue(String withQuotes) {
+        def vMatcher = withQuotes =~ /"([\S\s]*)"$/
+        if (vMatcher.matches()) {
+            return vMatcher.group(1);
+        }
+        throw IllegalArgumentException("invalid expression ${withQuotes}");
+    }
+
+    private void instantiateMachines(VMLSProperties props) {
         int vmCount = props.readNumber("index.count");
-        for(int i = 0; i< vmCount; i++) {
-            def indexIdKey ="index${i}.id";
-            def configPath = props.readProperty(indexIdKey);
-            VMwareInstance newInstance = VMwareInstance.fromVmxFile(new File(configPath));
+        for (int i = 0; i < vmCount; i++) {
+            String indexIdKey = "index${i}.id";
+            String configPath = props.readProperty(indexIdKey);
+            if(configPath==null)
+                throw new IllegalStateException("index.count is higher than the number of actual machines?. Inventory corrupted?");
+
+            VMwareInstance newInstance = new VMwareInstance(new File(configPath));
             //find vmlist<<Index>>
             props.any { String key, String value ->
                 def kMatcher = key =~ /vmlist(\d)[.]config$/
-                if(kMatcher.matches()) {
-                    def vMatcher = value =~ /"([\S\s]*)"$/
-                    if(vMatcher.matches()) {
-                        if(vMatcher.group(1).equals(configPath)) {
-                            newInstance.setVmlistIndex(Integer.parseInt(kMatcher.group(1)));
-                            return true;
-                        }
-                    } else {
-                        throw new IllegalStateException("found vmlist but could not parse out the double quotes")
+                if (kMatcher.matches()) {
+                    String valueParsed = parseValue(value);
+                    if (valueParsed.equals(configPath)) {
+                        newInstance.setVmlistIndex(Integer.parseInt(kMatcher.group(1)));
+                        return true;
                     }
                 }
             }
             idxInstancesMap.put(i, newInstance);
             vmListInstancesMap.put(newInstance.getVmlistIndex(), newInstance);
         }
-
-        //fill up the properties for each VMwareinstance
-        props.forEach({ String k, String v ->
-            def dotIndex = k.indexOf(".");
-            def indexPart = k.substring(0, dotIndex);
-            def rest = k.substring(dotIndex+1);
-
-            String res = indexPart.replaceAll('\\D*', "")
-            if(!res.isEmpty()) {
-                int index = Integer.parseInt(res);
-
-                if(indexPart.startsWith("index")) {
-                    VMwareInstance inst = idxInstancesMap.get(index);
-                    if(inst==null)
-                        throw new IllegalStateException("VMwareInstance not found. It should not happen")
-                    inst.putIndexProperty(rest, v);
-                } else if(indexPart.startsWith("vmlist")) {
-                    VMwareInstance inst = vmListInstancesMap.get(index);
-                    inst.putVmlistProperty(rest, v);
-                }
-            }
-            //find first digit
-        })
-
-        logger.trace("properties inventory initialized! ${vmListInstancesMap.size()} instances");
-        logger.debug(vmListInstancesMap.toMapString());
     }
 }

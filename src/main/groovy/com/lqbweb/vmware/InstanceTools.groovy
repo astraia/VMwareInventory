@@ -32,24 +32,25 @@ class InstanceTools {
         return res[0];
     }
 
-    public static File findFirstVM(File dir) {
-        Optional<Path> p = Files.walk(dir.toPath()).filter({
+    public static List<File> findVM(File dir) {
+        List<File> p = Files.walk(dir.toPath()).filter({
             Path path ->
                 File f = path.toFile();
-                if(f.isDirectory()) {
-                    try {
-                        getVmxFile(f);
-                        logger.trace("vm found in ${f.getAbsolutePath()}")
-                        return true;
-                    } catch(VmxFileNotFound e) {
-                        //nothing, continue
-                    } catch(MultipleVmxFiles m) {
-                        logger.error("Multiple VMX files inside ${f}")
-                    }
+                if(f.isFile() && f.getName().endsWith(".vmx")) {
+                    return true;
                 }
                 return false;
-        }).findFirst()
-        return p.get().toFile();
+        }).collect {    Path p ->
+            p.toFile();
+        }
+        return p;
+    }
+
+    public static File findFirstVM(File dir) {
+        List<File> res = findVM(dir);
+        if(res.isEmpty())
+            return null
+        return res.iterator().next();
     }
 
     public static boolean isMoidAutostart(int moid) {

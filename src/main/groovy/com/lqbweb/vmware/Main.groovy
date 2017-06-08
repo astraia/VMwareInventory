@@ -12,6 +12,12 @@ import javax.naming.OperationNotSupportedException
 class Main {
     final private static Logger logger = LoggerFactory.getLogger(Main.class);
 
+    public final static int WARNING = 3;
+    public final static int NOTHING_TO_DO = 2;
+    public final static int ERROR = 1;
+    public final static int SUCCESS = 0;
+
+
     private static void printHelp() {
         println "Main.class      -m|-f     -c|-r|-s|-e|-l     -a|-g"
         println "-m,--machine      Specified the exact directory for the VMware directory that you want to operate with"
@@ -28,6 +34,20 @@ class Main {
     }
 
     public static void main(String[] args) {
+        int exitCode=processMain(args)
+        //println "exitCode ${exitCode}"
+        System.exit(exitCode);
+    }
+
+    private static boolean assertExists(File vmDirPath) {
+        if (vmDirPath == null || !vmDirPath.exists()) {
+            println "could not find any virtual machine in the directory provided";
+            return false;
+        }
+        return true;
+    }
+
+    public static int processMain(String[] args) {
         ArgsEngine engine = new ArgsEngine();
         // Configure the switches/options. Use true for valued options.
         engine.add("-m", "--machine", true);
@@ -43,80 +63,103 @@ class Main {
 
         engine.parse(args);
 
-        if(engine.getBoolean("-h")) {
+        if (engine.getBoolean("-h")) {
             printHelp();
-            return;
+            return NOTHING_TO_DO;
         }
 
-
-        File vmDirPath;
+        File vmxFile;
         String findPath = engine.getString("-f");
         String path = engine.getString("-m");
         if (findPath != null && !findPath.isEmpty()) {
-            vmDirPath = InstanceTools.findFirstVM(new File(findPath));
+            List<File> vmxs = InstanceTools.findVM(new File(findPath));
+            if(vmxs.size()>1) {
+                println "multiple VMs found in the directory provided"
+                return WARNING;
+            } else if(vmxs.isEmpty()) {
+                println "no VMs found"
+                return WARNING;
+            }
+            vmxFile = vmxs.iterator().next();
         } else if (path != null && !path.isEmpty()) {
-            vmDirPath = new File(path);
-        } else {
-            throw new IllegalStateException("you need to specify --machine or --find")
+            vmxFile = new File(path);
         }
 
         GlobalInventory globalInventory = new GlobalInventory()
         PropertiesInventory propsInventory = new PropertiesInventory();
+        Autostart autostart = new Autostart();
 
         //ECHO
-        if(engine.getBoolean("-e")) {
-            println InstanceTools.getVmxFile(vmDirPath);
+        if (engine.getBoolean("-e")) {
+            if(!assertExists(vmxFile))
+                return WARNING;
 
-        //LIST
-        } else if(engine.getBoolean("-l")) {
+            println vmxFile.toString();
+        } else if (engine.getBoolean("-l")) {
             Inventory selected = propsInventory;
-            if(engine.getBoolean("-g")) {
-                selected=globalInventory;
+            if (engine.getBoolean("-g")) {
+                selected = globalInventory;
             }
-            selected.getInventory().forEach({VMwareInstance inst ->
+            selected.getInventory().forEach({ VMwareInstance inst ->
                 println inst.getVmxFile().getAbsolutePath()
             })
 
-        //CREATE
-        } else if(engine.getBoolean("-c")) {
-            if(engine.getBoolean("-g")) {
-                globalInventory.addInstance(new VMwareInstance(vmDirPath));
+            return SUCCESS;
+        } else if (engine.getBoolean("-c")) {
+            if(!assertExists(vmxFile))
+                return WARNING;   //already exists
+
+            if (engine.getBoolean("-g")) {
+                globalInventory.addInstance(new VMwareInstance(vmxFile));
                 logger.info("instance added into the global repository");
                 globalInventory.write();
             } else {
                 throw new OperationNotSupportedException();
             }
 
-        // REMOVE
-        } else if(engine.getBoolean("-r")) {
-            if(engine.getBoolean("-g")) {
+            // REMOVE
+        } else if (engine.getBoolean("-r")) {
+            if (engine.getBoolean("-g")) {
                 //from global repository
-                File f = InstanceTools.getVmxFile(vmDirPath);
-                VMwareInstance instance = globalInventory.findInstance(f);
-                if(instance!=null) {
-                    if(globalInventory.removeInstance(instance)==null) {
-                        throw new IllegalStateException("Machine could not be found")
+                VMwareInstance instance = globalInventory.findInstance(vmxFile);
+                if (instance != null) {
+                    if (globalInventory.removeInstance(instance) == null) {
+                        logger.error("Machine could not be found");
+                        return ERROR;
                     }
                     logger.info("machine removed from the global repository");
                     globalInventory.write();
+
+                    if(engine.getBoolean("-a")) {
+                        autostart.removeInstance(instance.getObjId());
+                        autostart.write();
+                    }
                 } else {
-                    logger.error("machine with vmx path ${f.getAbsolutePath()} not found in the global repository");
+                    logger.error("machine with vmx path ${vmxFile.getAbsolutePath()} not found in the global repository");
+                    return NOTHING_TO_DO;
                 }
             } else {
                 //throw new OperationNotSupportedException("not implemented yet")
-                Integer id = propsInventory.findMachineIndex(InstanceTools.getVmxFile(vmDirPath));
-                if(id>=0) {
-                    if(!propsInventory.removeMachine(id)) {
+                Integer id = propsInventory.findMachineIndex(vmxFile);
+                if (id >= 0) {
+                    if (!propsInventory.removeMachine(id)) {
                         logger.error("machine could NOT be found in the properties inventory");
+                        return ERROR;
                     }
                     logger.info("machine removed from the properties inventory")
                     propsInventory.write();
+                } else {
+                    logger.warn("Machine not found in the repository");
+                    return NOTHING_TO_DO;
                 }
             }
 
-        // SHARE
-        } else if(engine.getBoolean("-s")) {
-            Integer id = propsInventory.findMachineIndex(InstanceTools.getVmxFile(vmDirPath));
+            // SHARE
+        } else if (engine.getBoolean("-s")) {
+            if(!assertExists(vmxFile))
+                return WARNING;
+
+            Integer id = propsInventory.findMachineIndex(vmxFile);
             if (id >= 0) {
                 logger.trace("machine found in propertiesInventory");
                 VMwareInstance inst = propsInventory.getMachine(id)
@@ -129,9 +172,8 @@ class Main {
                     propsInventory.write();
 
                     //--AUTOSTART
-                    if(engine.getBoolean("-a")) {
-                        Autostart autostart = new Autostart();
-                        if(autostart.isMoidIn(inst.getObjId())) {
+                    if (engine.getBoolean("-a")) {
+                        if (autostart.isMoidIn(inst.getObjId())) {
                             throw new IllegalStateException("MOID already existed in the autoStart file");
                         } else {
                             autostart.addInstance(inst);
@@ -139,9 +181,12 @@ class Main {
                         }
                     }
                 }
+                logger.info("done!")
             } else {
-                logger.error("machine not found! specified path ${vmDirPath.getAbsolutePath()}");
+                logger.error("machine not found! specified path ${vmxFile.getAbsolutePath()}");
+                return ERROR;
             }
         }
+        return SUCCESS;
     }
 }
