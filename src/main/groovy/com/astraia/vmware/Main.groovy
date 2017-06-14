@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory
 import javax.naming.OperationNotSupportedException
 
 /**
+ *
  * Created by Ruben on 23.05.2017.
  */
 class Main {
