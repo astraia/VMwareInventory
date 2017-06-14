@@ -1,4 +1,4 @@
-package com.lqbweb.vmware
+package com.astraia.vmware
 
 /**
  * Created by Ruben on 30.05.2017.

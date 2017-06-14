@@ -1,8 +1,8 @@
 apply plugin: 'groovy'
 apply plugin: 'java'
 
-group = "lqbweb"
-version = "1.0.10"
+group = "com.astraia"
+version = "1.0.11"
 
 repositories {
     mavenCentral()
@@ -28,6 +28,6 @@ task fatJar(type: Jar) {
     with jar
     manifest {
         attributes 'Implementation-Title': 'Gradle Quickstart', 'Implementation-Version': version
-        attributes 'Main-Class': 'com.lqbweb.vmware.Main'
+        attributes 'Main-Class': 'com.astraia.vmware.Main'
     }
 }

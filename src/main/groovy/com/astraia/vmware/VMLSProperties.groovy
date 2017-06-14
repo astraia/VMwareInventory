@@ -1,4 +1,4 @@
-package com.lqbweb.vmware
+package com.astraia.vmware
 
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
