@@ -64,7 +64,7 @@ class Autostart {
                 _type("vim.host.AutoStartManager.AutoPowerInfo")
                 key {
                     _type("vim.VirtualMachine")
-                    moid(instance.getObjId())
+                    moid(instance.getObjIdString())
                 }
                 startAction("PowerOn")
                 startDelay("-1")

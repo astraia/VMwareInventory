@@ -62,6 +62,10 @@ class VMwareInstance {
         return this.objId;
     }
 
+    public String getObjIdString() {
+        return VMwareInstance.convertObjId(getObjId());
+    }
+
     public void setVmlistIndex(int idx) {
         this.vmlistIndex=idx;
     }

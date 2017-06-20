@@ -48,7 +48,7 @@ class GlobalInventory implements Inventory{
     private int generateId() {
         int newId = this.globalInstances.size() * 16;
         while(!validateObjId(newId)) {
-            newId= VMwareInstance.convertObjId(newId+1);
+            newId++;
         }
         return newId;
     }
@@ -70,7 +70,7 @@ class GlobalInventory implements Inventory{
                     if(entry.getObjId()<0) {
                         objID(i*16) //ids should be multiple of 16 according to official vmware documentation
                     } else {
-                        objID(entry.getObjId()) //ids should be multiple of 16 according to official vmware documentation
+                        objID(entry.getObjIdString()) //ids should be multiple of 16 according to official vmware documentation
                     }
                     vmxCfgPath(entry.getVmxFile().getAbsolutePath());
                 }
