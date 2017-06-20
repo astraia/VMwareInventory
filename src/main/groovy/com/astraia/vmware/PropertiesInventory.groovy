@@ -115,13 +115,15 @@ class PropertiesInventory implements Inventory{
                     if (indexPart.startsWith("index")) {
                         VMwareInstance inst = idxInstancesMap.get(index);
                         if (inst == null)
-                            throw new IllegalStateException("VMwareInstance not found. It should not happen")
+                            throw new IllegalStateException("VMwareInstance not found. This should not happen")
                         inst.putIndexProperty(rest, v);
                     } else if (indexPart.startsWith("vmlist")) {
                         VMwareInstance inst = vmListInstancesMap.get(index);
-                        if (inst == null)
-                            throw new NullPointerException("could not find VMware instance for index ${index} value ${v}");
-                        inst.putVmlistProperty(rest, v);
+                        if (inst == null) {
+                            logger.warn("could not find VMware instance for index ${index} value ${v}. Ignoring vmlist${index}");
+                        } else {
+                            inst.putVmlistProperty(rest, v);
+                        }
                     }
                 }
             }
