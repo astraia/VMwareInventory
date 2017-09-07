@@ -24,6 +24,7 @@ class Main {
         println "-m,--machine      Specified the exact directory for the VMware directory that you want to operate with"
         println "-f,--find         Instead of specifying an exact path with -m, this will look recursively for the first machine directory"
 
+        println "-cl,--cleanup     Cleans up the properties repository and the global repository (if -g is set) from machines that do not exist in pointed path"
         println "-c,--create       Adds the specified machine with -m or -f to the VMware Inventory"
         println "-r,--remove       Removes the specified machine with -m or -f from the VMware Inventory"
         println "-s,--share        Moves one machine from the normal pool of machines (inventory.vmls), to Shared Machines (vmAutoStart.xml)"
@@ -53,6 +54,7 @@ class Main {
         // Configure the switches/options. Use true for valued options.
         engine.add("-m", "--machine", true);
         engine.add("-f", "--find", true);
+        engine.add("-cl", "--cleanup", false);
         engine.add("-c", "--create", false);    //inserts the machine in to the properties repository, or the global one if --global
         engine.add("-r", "--remove", false);    //removes the specified machine
         engine.add("-g", "--global", false);    //any operation with this machine will be done against the global repository (xml)
@@ -65,6 +67,10 @@ class Main {
         engine.parse(args);
 
         if (engine.getBoolean("-h")) {
+            println "PropertiesInventory path: ${Globals.inventoryPropsFile.getAbsolutePath()}"
+            println "GlobalInventory path: ${Globals.inventoryXmlFile.getAbsolutePath()}"
+            println "Global Autostarts path: ${Globals.autoStartFile.getAbsolutePath()}"
+
             printHelp();
             return NOTHING_TO_DO;
         }
@@ -187,6 +193,25 @@ class Main {
                 logger.error("machine not found! specified path ${vmxFile.getAbsolutePath()}");
                 return ERROR;
             }
+
+            //CLEANUP
+        } else if (engine.getBoolean("-cl")) {
+            Inventory inventory = propsInventory;
+            if (engine.getBoolean("-g")) {
+                inventory = globalInventory;
+            }
+
+            inventory.forEach({ VMwareInstance inst ->
+                File f = inst.getVmxFile();
+                if(!f.isFile()) {
+                    logger.info("vmxFile does not exist ${f.getAbsolutePath()} cleaning up machine");
+                    if(!inventory.removeMachine(f)) {
+                        logger.error("machine not removed properly ${f.getAbsolutePath()}");
+                    }
+                }
+            })
+
+            inventory.write();
         }
         return SUCCESS;
     }

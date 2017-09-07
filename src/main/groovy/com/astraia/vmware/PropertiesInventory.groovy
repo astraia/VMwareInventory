@@ -35,6 +35,15 @@ class PropertiesInventory implements Inventory{
         return res.key;
     }
 
+    @Override
+    public boolean removeMachine(File vmxFile) {
+        Integer idxFile = findMachineIndex(vmxFile);
+        if(idxFile>=0) {
+            return removeMachine(idxFile);
+        }
+        return false;
+    }
+
     public boolean removeMachine(int id) {
         VMwareInstance inst = idxInstancesMap.remove(id);
         if(inst!=null) {
@@ -43,6 +52,7 @@ class PropertiesInventory implements Inventory{
         return false;
     }
 
+    @Override
     public Set<VMwareInstance> getInventory() {
         return new HashSet<VMwareInstance>(this.idxInstancesMap.values());
     }
@@ -68,6 +78,7 @@ class PropertiesInventory implements Inventory{
         builder << "index.count = \"${idxInstancesMap.size()}\"${nl}"
     }
 
+    @Override
     public void write() {
         //write headers
         StringBuilder builder = StringBuilder.newInstance();

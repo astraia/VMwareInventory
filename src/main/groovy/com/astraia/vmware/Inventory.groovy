@@ -5,4 +5,6 @@ package com.astraia.vmware
  */
 interface Inventory {
     public Set<VMwareInstance> getInventory();
+    public boolean removeMachine(File vmxFile);
+    public void write();
 }

@@ -59,6 +59,7 @@ class GlobalInventory implements Inventory{
         }==null;
     }
 
+    @Override
     public void write() {
         XmlSlurper xmlSlurper = new XmlSlurper();
         GPathResult newRoot = xmlSlurper.parseText("<ConfigRoot/>")
@@ -101,6 +102,16 @@ class GlobalInventory implements Inventory{
         return null;
     }
 
+    @Override
+    public boolean removeMachine(File vmxFile) {
+        VMwareInstance inst = findInstance(vmxFile);
+        if(inst!=null) {
+            return removeInstance(inst)!=null;
+        }
+        return false;
+    }
+
+    @Override
     public Set<VMwareInstance> getInventory() {
         return new HashSet<VMwareInstance>(this.globalInstances);
     }
