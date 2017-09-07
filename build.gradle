@@ -2,7 +2,7 @@ apply plugin: 'groovy'
 apply plugin: 'java'
 
 group = "com.astraia"
-version = "1.0.13"
+version = "1.0.14"
 
 
 sourceCompatibility = 1.8

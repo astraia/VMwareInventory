@@ -70,6 +70,7 @@ class Main {
             println "PropertiesInventory path: ${Globals.inventoryPropsFile.getAbsolutePath()}"
             println "GlobalInventory path: ${Globals.inventoryXmlFile.getAbsolutePath()}"
             println "Global Autostarts path: ${Globals.autoStartFile.getAbsolutePath()}"
+            println "---------------------------------";
 
             printHelp();
             return NOTHING_TO_DO;
@@ -201,17 +202,30 @@ class Main {
                 inventory = globalInventory;
             }
 
-            inventory.forEach({ VMwareInstance inst ->
+            int counter = 0;
+            inventory.getInventory().forEach({ VMwareInstance inst ->
                 File f = inst.getVmxFile();
                 if(!f.isFile()) {
-                    logger.info("vmxFile does not exist ${f.getAbsolutePath()} cleaning up machine");
+                    logger.info("removing machine as vmxFile does not exist ${f.getAbsolutePath()}");
                     if(!inventory.removeMachine(f)) {
                         logger.error("machine not removed properly ${f.getAbsolutePath()}");
+                    } else {
+                        if(engine.getBoolean("-a") && inst.getObjId()>=0) {
+                            logger.debug("removing ${inst.getObjId()} from autostart");
+                            autostart.removeInstance(inst.getObjId());
+                        }
+                        counter++;
                     }
                 }
             })
 
             inventory.write();
+            if(engine.getBoolean("-a")) {
+                logger.debug("writing autostart");
+                autostart.write();
+            }
+
+            println "done removing ${counter} machines!"
         }
         return SUCCESS;
     }

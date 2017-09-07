@@ -160,7 +160,7 @@ class PropertiesInventory implements Inventory{
             VMwareInstance newInstance = new VMwareInstance(new File(configPath));
             //find vmlist<<Index>>
             props.any { String key, String value ->
-                def kMatcher = key =~ /vmlist(\d)[.]config$/
+                def kMatcher = key =~ /vmlist([\d]++)[.]config$/
                 if (kMatcher.matches()) {
                     String valueParsed = parseValue(value);
                     if (valueParsed.equals(configPath)) {
