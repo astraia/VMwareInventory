@@ -118,9 +118,14 @@ class Main {
                 return WARNING;   //already exists
 
             if (engine.getBoolean("-g")) {
-                globalInventory.addInstance(new VMwareInstance(vmxFile));
+                VMwareInstance inst = new VMwareInstance(vmxFile)
+                globalInventory.addInstance(inst);
                 logger.info("instance added into the global repository");
                 globalInventory.write();
+
+                if (engine.getBoolean("-a")) {
+                    addToAutostart(autostart, inst)
+                }
             } else {
                 throw new OperationNotSupportedException();
             }
@@ -181,12 +186,7 @@ class Main {
 
                     //--AUTOSTART
                     if (engine.getBoolean("-a")) {
-                        if (autostart.isMoidIn(inst.getObjId())) {
-                            throw new IllegalStateException("MOID already existed in the autoStart file");
-                        } else {
-                            autostart.addInstance(inst);
-                            autostart.write();
-                        }
+                        addToAutostart(autostart, inst)
                     }
                 }
                 logger.info("done!")
@@ -228,5 +228,14 @@ class Main {
             println "done removing ${counter} machines!"
         }
         return SUCCESS;
+    }
+
+    private static void addToAutostart(Autostart autostart, VMwareInstance inst) {
+        if (autostart.isMoidIn(inst.getObjId())) {
+            throw new IllegalStateException("MOID already existed in the autoStart file");
+        } else {
+            autostart.addInstance(inst);
+            autostart.write();
+        }
     }
 }
