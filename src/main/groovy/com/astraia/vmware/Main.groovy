@@ -191,7 +191,7 @@ class Main {
                 }
                 logger.info("done!")
             } else {
-                logger.error("machine not found! specified path ${vmxFile.getAbsolutePath()}");
+                logger.error("machine not found in the properties inventory ${Globals.inventoryPropsFile.getAbsolutePath()}! specified path ${vmxFile.getAbsolutePath()}");
                 return ERROR;
             }
 
