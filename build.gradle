@@ -26,6 +26,10 @@ jar {
     baseName "vmwareInventory"
 }
 
+task wrapper(type: Wrapper) {
+    gradleVersion = '4.5' //version required
+}
+
 task fatJar(type: Jar) {
     baseName = project.jar.baseName + '-all'
     from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
